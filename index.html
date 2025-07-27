@@ -1,105 +1,229 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Control de Scroll con la Mirada</title>
-  <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
-  <style>
-    body {
-      height: 3000px;
-      font-family: sans-serif;
-      padding: 50px;
-      line-height: 1.5;
-      background: #000; /* fondo negro */
-      color: #fff; /* texto blanco */
-    }
-    #status {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      padding: 10px 15px;
-      border-radius: 6px;
-      font-size: 14px;
-      z-index: 9999;
-    }
-    #message {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.1);
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 14px;
-      color: #fff;
-    }
-    .triangle {
-      width: 0;
-      height: 0;
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10000;
-    }
-    .triangle-up {
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-bottom: 30px solid #00ff00; /* verde */
-      top: 20%;
-      display: none;
-    }
-    .triangle-down {
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-top: 30px solid #ff0000; /* rojo */
-      bottom: 20%;
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scroll con mirada - Cristal y gradiente multicolor</title>
+<script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+<style>
+  body {
+    height: 3000px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 50px;
+    line-height: 1.5;
+    background: linear-gradient(180deg, #c7b9ff, #d8ffd2);
+    background-size: cover;
+    color: #333;
+    overflow-x: hidden;
+    position: relative;
+    transition: background 0.4s ease;
+  }
+  #status {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(255 255 255 / 0.2);
+    color: #222;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 9999;
+    backdrop-filter: blur(6px);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    user-select: none;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+#ball {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  border: 1.5px solid #000;
+box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  /*box-shadow:
+    inset 0 0 20px rgba(255,255,255,0.1),
+    0 4px 15px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.7); /* Borde negro semi-opaco */
+
+  z-index: 9999;
+  will-change: transform, top;
+}
+
+  .trail {
+    position: fixed;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    pointer-events: none;
+    z-index: 500;
+    animation: fade 0.5s forwards;
+    filter: blur(1px);
+  }
+  @keyframes fade {
+    0% { opacity: 1; transform: scale(1);}
+    100% { opacity: 0; transform: scale(0.3);}
+  }
+</style>
 </head>
 <body>
   <div id="status">Detectando mirada...</div>
-  <div id="message">Mantén la mirada en la parte superior o inferior para desplazarte.</div>
-  <div class="triangle triangle-up" id="triangle-up"></div>
-  <div class="triangle triangle-down" id="triangle-down"></div>
+  <div id="ball"></div>
 
-  <h1>Prueba de Control de Scroll con los Ojos</h1>
-  <p>Mira hacia arriba o hacia abajo para hacer scroll en esta página.</p>
+  <h1>Scroll con la mirada</h1>
+  <p>Mira hacia arriba/izquierda o abajo/erecha para desplazarte.</p>
 
-  <script>
-    const triUp = document.getElementById('triangle-up');
-    const triDown = document.getElementById('triangle-down');
+<script>
+  const statusDiv = document.getElementById('status');
+  const ball = document.getElementById('ball');
 
-    // Iniciar WebGazer
-    webgazer.setRegression('ridge')
-      .setGazeListener((data) => {
-        if (!data) return;
-        const y = data.y; 
-        const centerY = window.innerHeight / 2;
+  const SCROLL_INTERVAL = 30;
+  const BASE_SPEED = 5;
+  const MAX_SPEED = 20;
+  const THRESHOLD = 120;
+  const BUFFER_SIZE = 7;
+  const BALL_H = 60;
+  const SPRING_K = 0.22;
+  const DAMPING = 0.85;
+  const BOUNCE_FACTOR = 0.6;
+  const EDGE_EXTRA_PUSH = 10;
+  const TRAIL_EVERY_N_FRAMES = 3;
 
-        if (y < centerY - 100) {
-          window.scrollBy(0, -10);
-          triUp.style.display = 'block';
-          triDown.style.display = 'none';
-        } else if (y > centerY + 100) {
-          window.scrollBy(0, 10);
-          triUp.style.display = 'none';
-          triDown.style.display = 'block';
-        } else {
-          triUp.style.display = 'none';
-          triDown.style.display = 'none';
-        }
+  let yBuffer = [];
+  let scrollDirection = null;
+  let scrollTimer = null;
+  let miradaIntensity = 0;
 
-        document.getElementById('status').innerText =
-          `Posición Y: ${y.toFixed(0)} | Dirección: ${y < centerY ? "ARRIBA" : (y > centerY ? "ABAJO" : "CENTRO")}`;
-      })
-      .begin();
+  let ballY = window.innerHeight / 2;
+  let ballVy = 0;
+  let frameCount = 0;
 
-    // Ocultar el video de depuración de WebGazer
-    webgazer.showVideoPreview(false).showPredictionPoints(false);
-  </script>
+  function createTrail(x, y) {
+    const trail = document.createElement('div');
+    trail.className = 'trail';
+    trail.style.left = (x - 6) + 'px';
+    trail.style.top = (y - 6) + 'px';
+    document.body.appendChild(trail);
+    setTimeout(() => trail.remove(), 500);
+  }
+
+  function interpolateColor(color1, color2, factor) {
+    const c1 = color1.match(/\w\w/g).map(x => parseInt(x,16));
+    const c2 = color2.match(/\w\w/g).map(x => parseInt(x,16));
+    const c = c1.map((v,i) => Math.round(v + (c2[i]-v)*factor));
+    return `#${c.map(x => x.toString(16).padStart(2,"0")).join('')}`;
+  }
+
+  function updateBackground(progress) {
+    // De 0% a 50% pasamos de lavanda (#c7b9ff) a verde-amarillo (#d8ffd2)
+    // De 50% a 100% pasamos de verde-amarillo a rosita (#ffd6e8)
+    let colorTop, colorBottom;
+    if (progress < 0.5) {
+      const p = progress / 0.5;
+      colorTop = interpolateColor("c7b9ff", "d8ffd2", p);
+      colorBottom = interpolateColor("d8ffd2", "d8ffd2", p);
+    } else {
+      const p = (progress - 0.5) / 0.5;
+      colorTop = interpolateColor("d8ffd2", "ffd6e8", p);
+      colorBottom = interpolateColor("d8ffd2", "ffd6e8", p);
+    }
+    document.body.style.background = `linear-gradient(180deg, ${colorTop}, ${colorBottom})`;
+  }
+
+  function animateBall() {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight;
+    const viewH = window.innerHeight;
+    const maxScroll = Math.max(1, docHeight - viewH);
+    const progress = scrollTop / maxScroll;
+    const targetY = progress * (viewH - BALL_H);
+
+    const force = (targetY - ballY) * SPRING_K;
+    ballVy = (ballVy + force) * DAMPING;
+    ballY += ballVy;
+
+    const atTop = scrollTop <= 0.5;
+    const atBottom = scrollTop >= maxScroll - 0.5;
+
+    if (atTop && targetY === 0 && ballY < 0) {
+      ballY = 0;
+      ballVy = Math.abs(ballVy) * BOUNCE_FACTOR + EDGE_EXTRA_PUSH;
+    }
+    if (atBottom && targetY >= viewH - BALL_H && ballY > viewH - BALL_H) {
+      ballY = viewH - BALL_H;
+      ballVy = -Math.abs(ballVy) * BOUNCE_FACTOR - EDGE_EXTRA_PUSH;
+    }
+
+    ball.style.top = ballY + 'px';
+
+    if (++frameCount % TRAIL_EVERY_N_FRAMES === 0) {
+      createTrail(window.innerWidth / 2, ballY + BALL_H / 2);
+    }
+
+    updateBackground(progress);
+    requestAnimationFrame(animateBall);
+  }
+
+  function startScrolling(directionStr, intensity) {
+    if (scrollDirection !== directionStr) {
+      clearInterval(scrollTimer);
+      scrollDirection = directionStr;
+      scrollTimer = setInterval(() => {
+        const speed = BASE_SPEED + (MAX_SPEED - BASE_SPEED) * miradaIntensity;
+        window.scrollBy(0, directionStr === "ARRIBA" ? -speed : speed);
+      }, SCROLL_INTERVAL);
+    }
+  }
+
+  function stopScrolling() {
+    clearInterval(scrollTimer);
+    scrollDirection = null;
+  }
+
+  webgazer.setRegression('ridge')
+    .setGazeListener((data) => {
+      if (!data) return;
+
+      yBuffer.push(data.y);
+      if (yBuffer.length > BUFFER_SIZE) yBuffer.shift();
+      const y = yBuffer.reduce((a, b) => a + b, 0) / yBuffer.length;
+
+      const centerY = window.innerHeight / 2;
+      const distFromCenter = y - centerY;
+
+      if (distFromCenter < -THRESHOLD) {
+        miradaIntensity = Math.min(1, Math.abs(distFromCenter) / (window.innerHeight / 2));
+        startScrolling("ARRIBA", miradaIntensity);
+      } else if (distFromCenter > THRESHOLD) {
+        miradaIntensity = Math.min(1, Math.abs(distFromCenter) / (window.innerHeight / 2));
+        startScrolling("ABAJO", miradaIntensity);
+      } else {
+        miradaIntensity = 0;
+        stopScrolling();
+      }
+
+      statusDiv.innerText = `Y: ${y.toFixed(0)} | Dirección: ${scrollDirection || "CENTRO"} | Progreso: ${Math.round((window.scrollY / Math.max(1, document.documentElement.scrollHeight - window.innerHeight)) * 100)}%`;
+    })
+    
+    .showVideoPreview(false)      // Desactiva la vista previa de la cámara
+    .showPredictionPoints(false)  // Quita los puntos de predicción
+    .begin()
+    .then(() => {
+      webgazer.showVideoPreview(false).showPredictionPoints(false);
+    });
+
+  animateBall();
+
+  window.addEventListener('resize', () => {
+    ballY = Math.min(ballY, window.innerHeight - BALL_H);
+  });
+</script>
 </body>
 </html>
