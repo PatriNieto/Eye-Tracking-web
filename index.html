@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Scroll con la Mirada</title>
+  <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+  <style>
+    body {
+      height: 3000px;
+      font-family: sans-serif;
+      padding: 50px;
+      line-height: 1.5;
+      background: #000; /* fondo negro */
+      color: #fff; /* texto blanco */
+    }
+    #status {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 9999;
+    }
+    #message {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.1);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #fff;
+    }
+    .triangle {
+      width: 0;
+      height: 0;
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+    }
+    .triangle-up {
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid #00ff00; /* verde */
+      top: 20%;
+      display: none;
+    }
+    .triangle-down {
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 30px solid #ff0000; /* rojo */
+      bottom: 20%;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">Detectando mirada...</div>
+  <div id="message">Mantén la mirada en la parte superior o inferior para desplazarte.</div>
+  <div class="triangle triangle-up" id="triangle-up"></div>
+  <div class="triangle triangle-down" id="triangle-down"></div>
+
+  <h1>Prueba de Control de Scroll con los Ojos</h1>
+  <p>Mira hacia arriba o hacia abajo para hacer scroll en esta página.</p>
+
+  <script>
+    const triUp = document.getElementById('triangle-up');
+    const triDown = document.getElementById('triangle-down');
+
+    // Iniciar WebGazer
+    webgazer.setRegression('ridge')
+      .setGazeListener((data) => {
+        if (!data) return;
+        const y = data.y; 
+        const centerY = window.innerHeight / 2;
+
+        if (y < centerY - 100) {
+          window.scrollBy(0, -10);
+          triUp.style.display = 'block';
+          triDown.style.display = 'none';
+        } else if (y > centerY + 100) {
+          window.scrollBy(0, 10);
+          triUp.style.display = 'none';
+          triDown.style.display = 'block';
+        } else {
+          triUp.style.display = 'none';
+          triDown.style.display = 'none';
+        }
+
+        document.getElementById('status').innerText =
+          `Posición Y: ${y.toFixed(0)} | Dirección: ${y < centerY ? "ARRIBA" : (y > centerY ? "ABAJO" : "CENTRO")}`;
+      })
+      .begin();
+
+    // Ocultar el video de depuración de WebGazer
+    webgazer.showVideoPreview(false).showPredictionPoints(false);
+  </script>
+</body>
+</html>
