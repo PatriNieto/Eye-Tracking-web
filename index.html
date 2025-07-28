@@ -34,28 +34,21 @@
     user-select: none;
     box-shadow: 0 0 8px rgba(0,0,0,0.1);
   }
-#ball {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 50%;
-  width: 60px;
-  height: 60px;
-  border: 1.5px solid #000;
-box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
-
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  /*box-shadow:
-    inset 0 0 20px rgba(255,255,255,0.1),
-    0 4px 15px rgba(0,0,0,0.15);
-  border: 1px solid rgba(0,0,0,0.7); /* Borde negro semi-opaco */
-
-  z-index: 9999;
-  will-change: transform, top;
-}
-
+  #ball {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    border: 1.5px solid #000;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    will-change: transform, top;
+  }
   .trail {
     position: fixed;
     width: 12px;
@@ -71,11 +64,35 @@ box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
     0% { opacity: 1; transform: scale(1);}
     100% { opacity: 0; transform: scale(0.3);}
   }
+
+
+  
+  /* Caldero de oro */
+  #caldero {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    font-size: 60px;
+    z-index: 10000;
+    transition: transform 0.4s ease;
+    pointer-events: none;
+    filter: drop-shadow(0 0 4px gold);
+  }
+  #caldero.show {
+    transform: translateX(-50%) scale(1);
+  }
 </style>
 </head>
 <body>
   <div id="status">Detectando mirada...</div>
   <div id="ball"></div>
+
+  <!-- Caldero de oro -->
+   
+  <div id="caldero">
+    ✨ ✨
+</div>
 
   <h1>Scroll con la mirada</h1>
   <p>Mira hacia arriba/izquierda o abajo/erecha para desplazarte.</p>
@@ -83,6 +100,7 @@ box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 <script>
   const statusDiv = document.getElementById('status');
   const ball = document.getElementById('ball');
+  const caldero = document.getElementById('caldero');
 
   const SCROLL_INTERVAL = 30;
   const BASE_SPEED = 5;
@@ -122,8 +140,6 @@ box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
   }
 
   function updateBackground(progress) {
-    // De 0% a 50% pasamos de lavanda (#c7b9ff) a verde-amarillo (#d8ffd2)
-    // De 50% a 100% pasamos de verde-amarillo a rosita (#ffd6e8)
     let colorTop, colorBottom;
     if (progress < 0.5) {
       const p = progress / 0.5;
@@ -168,6 +184,14 @@ box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
     }
 
     updateBackground(progress);
+
+    // Mostrar caldero si estamos al final del scroll (> 98%)
+    if (progress > 0.98) {
+      caldero.classList.add('show');
+    } else {
+      caldero.classList.remove('show');
+    }
+
     requestAnimationFrame(animateBall);
   }
 
@@ -211,9 +235,8 @@ box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 
       statusDiv.innerText = `Y: ${y.toFixed(0)} | Dirección: ${scrollDirection || "CENTRO"} | Progreso: ${Math.round((window.scrollY / Math.max(1, document.documentElement.scrollHeight - window.innerHeight)) * 100)}%`;
     })
-    
-    .showVideoPreview(false)      // Desactiva la vista previa de la cámara
-    .showPredictionPoints(false)  // Quita los puntos de predicción
+    .showVideoPreview(false)
+    .showPredictionPoints(false)
     .begin()
     .then(() => {
       webgazer.showVideoPreview(false).showPredictionPoints(false);
